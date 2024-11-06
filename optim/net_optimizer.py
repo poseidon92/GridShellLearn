@@ -1,5 +1,7 @@
 import torch
 import time
+import random
+import numpy as np
 from optim.structural_calculus import StructuralCalculus
 from models.layers.featured_mesh import FeaturedMesh
 from models.networks import DisplacerNet, MultiDisplacerNet, MultiMaxDisplacerNet, MultiMeanDisplacerNet
@@ -11,6 +13,16 @@ from matplotlib import cm
 class StructuralNetOptimizer:
 
     def __init__(self, file, lr, momentum, device, loss_type, no_knn, transform_in_features, get_loss, layer_mode):
+        # Setting randomization seed and ensuring replicability on CUDA.
+        torch.manual_seed(42)
+        torch.use_deterministic_algorithms(True)
+        torch.backends.cudnn.benchmark = False
+        random.seed(42)
+        np.random.seed(42)
+
+        # Setting 10 decimal digits tensor display.
+        torch.set_printoptions(precision=10)
+
         self.initial_mesh = FeaturedMesh(file=file, device=device)
         self.device = device
         self.loss_type = loss_type
@@ -22,12 +34,6 @@ class StructuralNetOptimizer:
         self.transform_in_features = transform_in_features
         self.get_loss = get_loss
         self.layer_mode = layer_mode
-
-        # Setting 10 decimal digits tensor display.
-        torch.set_printoptions(precision=10)
-
-        # Setting randomization seed.
-        torch.manual_seed(42)
 
         self.device = torch.device(device)
 
@@ -104,6 +110,11 @@ class StructuralNetOptimizer:
             # Computing structural loss.
             structural_loss = self.Structural_calculus(iteration_mesh, self.loss_type)
 
+            # Computing total length penalty term.
+            total_length_penalty = torch.sum(iteration_mesh.edge_lengths)
+            if current_iteration == 0:
+                total_length_penalty_scale = float(structural_loss / total_length_penalty)
+
             # Computing boundary penalty term.
             constrained_vertices = torch.logical_not(self.Structural_calculus.non_constrained_vertices)
             boundary_penalty = torch.mean(torch.norm(displacements[constrained_vertices], dim=1))
@@ -111,7 +122,7 @@ class StructuralNetOptimizer:
                 penalty_scale = float(0.3 * structural_loss / boundary_penalty)
 
             # Summing loss components.
-            loss = structural_loss + penalty_scale * boundary_penalty
+            loss = structural_loss + penalty_scale * boundary_penalty # + total_length_penalty_scale * total_length_penalty
 
             # Saving current iteration mesh if requested.
             if current_iteration % save_interval == 0:
@@ -140,8 +151,8 @@ class StructuralNetOptimizer:
                     best_energy = self.Structural_calculus.beam_energy
 
             # Checking stopping criteria.
-            if self.check_early_stopping(current_iteration):
-                break
+            # if self.check_early_stopping(current_iteration):
+            #     break
 
             # Computing gradients and updating optimizer
             back_start = time.time()
