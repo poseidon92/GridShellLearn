@@ -261,13 +261,13 @@ class StructuralCalculus:
 
         # Computing beam energy according this coordinate system:
         # axes: 1=elementAxis; 2=EdgeNormal; 3=InPlaneAxis
-        # output rows: [Axial_startNode; Shear2_startNode; Shear3_startNode; Torque_startNode; Bending3_startNode; Bending2_startNode;
-        #                ...Axial_endNode; Shear2_endNode; Shear3_endNode; Torque_endNode; Bending3_endNode; Bending2_endNode]
+        # output rows: [Axial_startNode; Shear2_startNode; Shear3_startNode; Torque_startNode; Bending2_startNode; Bending3_startNode;
+        #                ...Axial_endNode; Shear2_endNode; Shear3_endNode; Torque_endNode; Bending2_endNode; Bending3_endNode]
         self.beam_energy_without_axial = mesh.edge_lengths/2 * (self.properties[6] * mean_forces[:, 1]**2 / (self.properties[9] * self.properties[2]) +
                                                                 self.properties[6] * mean_forces[:, 2]**2 / (self.properties[9] * self.properties[2]) +
                                                                                      mean_forces[:, 3]**2 / (self.properties[9] * self.properties[5]) +
-                                                                                     mean_forces[:, 4]**2 / (self.properties[1] * self.properties[4]) +
-                                                                                     mean_forces[:, 5]**2 / (self.properties[1] * self.properties[3]) )
+                                                                                     mean_forces[:, 4]**2 / (self.properties[1] * self.properties[3]) +
+                                                                                     mean_forces[:, 5]**2 / (self.properties[1] * self.properties[4]) )
         self.beam_energy = self.beam_energy_without_axial + mesh.edge_lengths/2 * mean_forces[:, 0]**2/(self.properties[1]*self.properties[2])
 
         # Freeing memory space.
